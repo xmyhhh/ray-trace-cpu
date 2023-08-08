@@ -21,7 +21,6 @@ set ( EXTERNAL
 
 set ( SOURCE_v1
   src/external/stb_image.h
-
   src/v1/main.cpp
 )
 
