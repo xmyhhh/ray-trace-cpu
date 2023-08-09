@@ -4,12 +4,15 @@
 #include "ray.h"
 #include "interval.h"
 #include<vector>
+class material;
+
 class hit_record {
 public:
 	point3 p;
 	vec3 normal;
 	double t;
 	bool front_face;
+	std::shared_ptr<material> mat;
 
 	void set_face_normal(const ray& r, const vec3& outward_normal) {
 		// Sets the hit record normal vector.
@@ -21,6 +24,9 @@ public:
 };
 
 class hittable {
+protected:
+	std::shared_ptr<material> mat;
+
 public:
 	virtual ~hittable() = default;
 
@@ -29,7 +35,9 @@ public:
 
 class sphere : public hittable {
 public:
-	sphere(point3 _center, double _radius) : center(_center), radius(_radius) {}
+	sphere(point3 _center, double _radius, std::shared_ptr<material> _material) : center(_center), radius(_radius) {
+		mat = _material;
+	}
 
 	bool hit(const ray& r, interval ray_t, hit_record& rec)  const override {
 		vec3 oc = r.origin() - center;
@@ -53,6 +61,7 @@ public:
 
 		rec.t = root;
 		rec.p = r.at(rec.t);
+		rec.mat = mat;
 
 		vec3 outward_normal = (rec.p - center) / radius;
 		rec.set_face_normal(r, outward_normal);

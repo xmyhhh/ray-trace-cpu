@@ -14,8 +14,8 @@ using std::sqrt;
 const double infinity = std::numeric_limits<double>::infinity();
 const double pi = 3.1415926535897932385;
 
-// Utility Functions
 
+// Utility Functions
 inline double degrees_to_radians(double degrees) {
 	return degrees * pi / 180.0;
 }
@@ -30,6 +30,7 @@ inline double random_double(double min, double max) {
 	// Returns a random real in [min,max).
 	return min + (max - min) * random_double();
 }
+
 
 class vec3 {
 public:
@@ -75,9 +76,19 @@ public:
 		return *this;
 	}
 
+	bool near_zero() const {
+		// Return true if the vector is close to zero in all dimensions.
+		auto s = 1e-8;
+		return (fabs(e[0]) < s) && (fabs(e[1]) < s) && (fabs(e[2]) < s);
+	}
+
+
+
 	double length_squared() const {
 		return e[0] * e[0] + e[1] * e[1] + e[2] * e[2];
 	}
+
+
 
 	static vec3 random() {
 		return vec3(random_double(), random_double(), random_double());
@@ -157,4 +168,12 @@ inline vec3 random_on_hemisphere(const vec3& normal) {
 	else
 		return -on_unit_sphere;
 }
+
+
+
+
+vec3 reflect(const vec3& v, const vec3& n) {
+	return v - 2 * dot(v, n) * n;
+}
+
 #endif

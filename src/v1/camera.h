@@ -6,6 +6,8 @@
 #include "hittable.h"
 #include <fstream>
 #include<ppl.h>
+#include"material.h"
+
 void write_color(std::ostream& out, vec3 pixel_color, int samples_per_pixel) {
 	//Images with data that are written without being transformed are said to be in linear space, whereas images that are transformed are said to be in gamma space.
 	auto linear_to_gamma = [](vec3 linear_component)
@@ -118,8 +120,11 @@ private:
 
 
 		if (world.hit(r, interval(0.001, infinity), rec)) {
-			vec3 direction = rec.normal + random_unit_vector();
-			return 0.9 * ray_color(ray(rec.p, direction), max_depth - 1, world);
+			ray scattered;
+			color attenuation;
+			if (rec.mat->scatter(r, rec, attenuation, scattered))
+				return attenuation * ray_color(scattered, max_depth - 1, world);
+			return color(0, 0, 0);
 		}
 
 		vec3 unit_direction = unit_vector(r.direction());
