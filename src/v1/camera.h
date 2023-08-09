@@ -5,8 +5,15 @@
 #include "vec3.h"
 #include "hittable.h"
 #include <fstream>
+#include<ppl.h>
+void write_color(std::ostream& out, vec3 pixel_color, int samples_per_pixel) {
+	//Images with data that are written without being transformed are said to be in linear space, whereas images that are transformed are said to be in gamma space.
+	auto linear_to_gamma = [](vec3 linear_component)
+	{
+		return linear_component.squared();
+	};
+	pixel_color = linear_to_gamma(pixel_color / samples_per_pixel);
 
-void write_color(std::ostream& out, vec3 pixel_color) {
 	out << static_cast<int>(255.999 * pixel_color.x()) << ' '
 		<< static_cast<int>(255.999 * pixel_color.y()) << ' '
 		<< static_cast<int>(255.999 * pixel_color.z()) << '\n';
@@ -16,26 +23,55 @@ void write_color(std::ostream& out, vec3 pixel_color) {
 class camera {
 public:
 
-	double aspect_ratio = 1.0;  // Ratio of image width over height
-	int    image_width = 100;  // Rendered image width in pixel count
+	double aspect_ratio = 16.0 / 9.0;  // Ratio of image width over height
+	int    image_width = 1920 * 2;  // Rendered image width in pixel count
+	int    samples_per_pixel = 35;   // Count of random samples for each pixel
+	int    max_depth = 10;   // Maximum number of ray bounces into scene
+
+	ray get_ray(int i, int j) const {
+		// Get a randomly sampled camera ray for the pixel at location i,j.
+
+		auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
+		auto pixel_sample = pixel_center + pixel_sample_square();
+
+		auto ray_origin = center;
+		auto ray_direction = pixel_sample - ray_origin;
+
+		return ray(ray_origin, ray_direction);
+	}
+
+	vec3 pixel_sample_square() const {
+		// Returns a random point in the square surrounding a pixel at the origin.
+		auto px = -0.5 + random_double();
+		auto py = -0.5 + random_double();
+		return (px * pixel_delta_u) + (py * pixel_delta_v);
+	}
 
 	void render(const hittable& world) {
 		initialize();
 
 		std::ofstream myfile;
-		myfile.open("v1example.ppm", std::ios::out | std::ios::binary | std::ios::trunc);
+		myfile.open("v1example_lamber.ppm", std::ios::out | std::ios::binary | std::ios::trunc);
 
 		myfile << "P3\n" << image_width << " " << image_height << "\n255\n";
+		std::vector<color> image(image_width * image_height);
 
-		for (int j = 0; j < image_height; ++j) {
-			std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
+		Concurrency::parallel_for(0, image_height, [&](int j) {
+			/*std::clog << "\rScanlines remaining: " << (remine - -) << ' ' << std::flush;*/
 			for (int i = 0; i < image_width; ++i) {
-				auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
-				auto ray_direction = pixel_center - center;
-				ray r(center, ray_direction);
+				color pixel_color(0, 0, 0);
+				for (int sample = 0; sample < samples_per_pixel; ++sample) {
+					ray r = get_ray(i, j);
+					pixel_color += ray_color(r, max_depth, world);
+				}
+				//write_color(myfile, pixel_color, samples_per_pixel);
+				image[(j * image_width + i)] = pixel_color;
+			}
+			});
 
-				vec3 pixel_color = ray_color(r, world);
-				write_color(myfile, pixel_color);
+		for (int j = 0; j < image_height; j++) {
+			for (int i = 0; i < image_width; ++i) {
+				write_color(myfile, image[(j * image_width + i)], samples_per_pixel);
 			}
 		}
 	}
@@ -72,11 +108,18 @@ private:
 		pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 	}
 
-	color ray_color(const ray& r, const hittable& world) const {
+	color ray_color(const ray& r, int max_depth, const hittable& world) const {
 		hit_record rec;
 
-		if (world.hit(r, interval(0, infinity), rec)) {
-			return 0.5 * (rec.normal + color(1, 1, 1));
+		// If we've exceeded the ray bounce limit, no more light is gathered.
+		if (max_depth <= 0) {
+			return color(0, 0, 0);
+		}
+
+
+		if (world.hit(r, interval(0.001, infinity), rec)) {
+			vec3 direction = rec.normal + random_unit_vector();
+			return 0.9 * ray_color(ray(rec.p, direction), max_depth - 1, world);
 		}
 
 		vec3 unit_direction = unit_vector(r.direction());
