@@ -7,10 +7,13 @@
 #include "material.h"
 #include <iostream>
 #include "bvh.h"
+#include <windows.h>
 
-
+#include <string>
 
 int main() {
+
+    __int64 begin = GetTickCount();
 
 	// Image
 
@@ -68,15 +71,18 @@ int main() {
     auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
     world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
 
-    world = hittable_list(make_shared<bvh_node>(world));
+
+    auto p = make_shared<bvh_node>(world);
+
+    world = hittable_list(p);
 
 	// Camera
 
 	camera cam;
 
     cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 1200;
-    cam.samples_per_pixel = 500;
+    cam.image_width = 1920 / 2;
+    cam.samples_per_pixel = 50;
     cam.max_depth = 50;
 
     cam.vfov = 20;
@@ -90,6 +96,9 @@ int main() {
 	cam.render(world);
 
 
-	std::clog << "\rDone.                 \n";
-	std::cin;
+    auto end = GetTickCount() - begin;
+    std::clog << "\rDone.      " + std::to_string(end / 1000.0) + "           \n";
+
+    int a;
+    std::cin >> a;
 }

@@ -75,7 +75,7 @@ public:
 		initialize();
 
 		std::ofstream myfile;
-		myfile.open("v2example_lamber_re_f.ppm", std::ios::out | std::ios::binary | std::ios::trunc);
+		myfile.open("v2.ppm", std::ios::out | std::ios::binary | std::ios::trunc);
 
 		myfile << "P3\n" << image_width << " " << image_height << "\n255\n";
 		std::vector<color> image(image_width * image_height);
