@@ -23,6 +23,11 @@ set ( SOURCE_v1
   src/external/stb_image.h
   src/v1/main.cpp
 )
+set ( SOURCE_v1.1
+  src/external/stb_image.h
+  src/v1+bvh/main.cpp
+)
+
 set ( SOURCE_v2
   src/external/stb_image.h
   src/v2/main.cpp
@@ -50,4 +55,5 @@ endif()
 
 # Executables
 add_executable(v1  ${EXTERNAL} ${SOURCE_v1})
+add_executable(v1+bvh  ${EXTERNAL} ${SOURCE_v1.1})
 add_executable(v2  ${EXTERNAL} ${SOURCE_v2})

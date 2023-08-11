@@ -2,7 +2,6 @@
 #ifndef MAT
 #define MAT
 #include"hittable.h"
-#include "texture.h"
 
 
 class material {
@@ -16,8 +15,7 @@ public:
 
 class lambertian : public material {
 public:
-	lambertian(const color& a) : albedo(make_shared<solid_color>(a)) {}
-	lambertian(shared_ptr<texture> a) : albedo(a) {}
+	lambertian(const color& a) : albedo(a) {}
 
 	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
 		const override {
@@ -28,12 +26,12 @@ public:
 			scatter_direction = rec.normal;
 
 		scattered = ray(rec.p, scatter_direction);
-		attenuation = albedo->value(rec.u, rec.v, rec.p);
+		attenuation = albedo;
 		return true;
 	}
 
 private:
-	shared_ptr<texture> albedo;
+	color albedo;
 };
 
 

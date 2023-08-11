@@ -18,13 +18,16 @@ public:
 	point3 p;
 	vec3 normal;
 	double t;
+
+	double u;
+	double v;
+
 	bool front_face;
 	std::shared_ptr<material> mat;
 
 	void set_face_normal(const ray& r, const vec3& outward_normal) {
 		// Sets the hit record normal vector.
 		// NOTE: the parameter `outward_normal` is assumed to have unit length.
-
 		front_face = dot(r.direction(), outward_normal) < 0;
 		normal = front_face ? outward_normal : -outward_normal;
 	}
@@ -37,9 +40,40 @@ protected:
 public:
 	virtual ~hittable() = default;
 
-	aabb bounding_box() const  { return bbox; }
+	aabb bounding_box() const { return bbox; }
 
 	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const = 0;
+};
+
+class hittable_list : public hittable {
+public:
+	std::vector<shared_ptr<hittable>> objects;
+
+	hittable_list() {}
+	hittable_list(shared_ptr<hittable> object) { add(object); }
+
+	void clear() { objects.clear(); }
+
+	void add(shared_ptr<hittable> object) {
+		objects.push_back(object);
+		bbox = aabb(bbox, object->bounding_box());
+	}
+
+	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+		hit_record temp_rec;
+		bool hit_anything = false;
+		auto closest_so_far = ray_t.max;
+
+		for (const auto& object : objects) {
+			if (object->hit(r, interval(ray_t.min, closest_so_far), temp_rec)) {
+				hit_anything = true;
+				closest_so_far = temp_rec.t;
+				rec = temp_rec;
+			}
+		}
+
+		return hit_anything;
+	}
 };
 
 class sphere : public hittable {
@@ -75,8 +109,23 @@ public:
 
 		vec3 outward_normal = (rec.p - center) / radius;
 		rec.set_face_normal(r, outward_normal);
-
+		get_sphere_uv(outward_normal, rec.u, rec.v);
 		return true;
+	}
+
+	static void get_sphere_uv(const point3& p, double& u, double& v) {
+		// p: a given point on the sphere of radius one, centered at the origin.
+		// u: returned value [0,1] of angle around the Y axis from X=-1.
+		// v: returned value [0,1] of angle from Y=-1 to Y=+1.
+		//     <1 0 0> yields <0.50 0.50>       <-1  0  0> yields <0.00 0.50>
+		//     <0 1 0> yields <0.50 1.00>       < 0 -1  0> yields <0.50 0.00>
+		//     <0 0 1> yields <0.25 0.50>       < 0  0 -1> yields <0.75 0.50>
+
+		auto theta = acos(-p.y());
+		auto phi = atan2(-p.z(), p.x()) + pi;
+
+		u = phi / (2 * pi);
+		v = theta / pi;
 	}
 
 private:
@@ -86,35 +135,52 @@ private:
 };
 
 
-class hittable_list : public hittable {
+class quad : public hittable {
+
 public:
-	std::vector<shared_ptr<hittable>> objects;
+	quad(const point3& _Q, const vec3& _u, const vec3& _v, shared_ptr<material> m)
+		: Q(_Q), u(_u), v(_v), mat(m)
+	{
+		set_bounding_box();
 
-	hittable_list() {}
-	hittable_list(shared_ptr<hittable> object) { add(object); }
-
-	void clear() { objects.clear(); }
-
-	void add(shared_ptr<hittable> object) {
-		objects.push_back(object);
-		bbox = aabb(bbox, object->bounding_box());
+		auto n = cross(u, v);
+		normal = unit_vector(n);
+		D = dot(normal, Q);
 	}
 
-	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
-		hit_record temp_rec;
-		bool hit_anything = false;
-		auto closest_so_far = ray_t.max;
-
-		for (const auto& object : objects) {
-			if (object->hit(r, interval(ray_t.min, closest_so_far), temp_rec)) {
-				hit_anything = true;
-				closest_so_far = temp_rec.t;
-				rec = temp_rec;
-			}
-		}
-
-		return hit_anything;
+	virtual void set_bounding_box() {
+		bbox = aabb(Q, Q + u + v).pad();
 	}
+
+	bool hit(const ray& r, interval ray_t, hit_record& rec)  const override {
+		auto denom = dot(normal, r.direction());
+
+		// No hit if the ray is parallel to the plane.
+		if (fabs(denom) < 1e-8)
+			return false;
+
+		// Return false if the hit point parameter t is outside the ray interval.
+		auto t = (D - dot(normal, r.origin())) / denom;
+		if (!ray_t.contains(t))
+			return false;
+
+		auto intersection = r.at(t);
+
+		rec.t = t;
+		rec.p = intersection;
+		rec.mat = mat;
+		rec.set_face_normal(r, normal);
+
+		return true;
+	}
+
+private:
+	point3 Q;
+	vec3 u, v;
+	shared_ptr<material> mat;
+
+	vec3 normal;
+	double D;
 };
 
 

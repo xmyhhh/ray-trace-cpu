@@ -24,7 +24,7 @@ void write_color(std::ostream& out, vec3 pixel_color, int samples_per_pixel) {
 
 class camera {
 public:
-	std::string file_name = "example.ppm";
+
 	double aspect_ratio = 1.0;  // Ratio of image width over height
 	int    image_width = 100;  // Rendered image width in pixel count
 	int    samples_per_pixel = 10;   // Count of random samples for each pixel
@@ -75,7 +75,7 @@ public:
 		initialize();
 
 		std::ofstream myfile;
-		myfile.open(file_name, std::ios::out | std::ios::binary | std::ios::trunc);
+		myfile.open("v1+bvh.ppm", std::ios::out | std::ios::binary | std::ios::trunc);
 
 		myfile << "P3\n" << image_width << " " << image_height << "\n255\n";
 		std::vector<color> image(image_width * image_height);
