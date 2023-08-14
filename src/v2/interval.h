@@ -5,6 +5,7 @@ class interval {
 public:
 	double min, max;
 
+
 	interval() : min(+infinity), max(-infinity) {} // Default interval is empty
 
 	interval(double _min, double _max) : min(_min), max(_max) {}
@@ -38,5 +39,14 @@ public:
 
 const static interval empty(+infinity, -infinity);
 const static interval universe(-infinity, +infinity);
+
+interval operator+(const interval& ival, double displacement) {
+	return interval(ival.min + displacement, ival.max + displacement);
+}
+
+interval operator+(double displacement, const interval& ival) {
+	return ival + displacement;
+}
+
 
 #endif
